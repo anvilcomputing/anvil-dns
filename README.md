@@ -1,7 +1,5 @@
 # **Anvil DNS Manager**
 
-Go Version License
-
 A lightweight, Go-based application for managing Cloudflare DNS records for `anvilcomputing.com`.
 
 Currently operating as a CLI, this tool is designed to quickly provision unproxied `A` records that point to a VPS running a reverse proxy (like Pangolin). It ensures naming collisions are prevented and provides simple commands to audit and clean up your Cloudflare zone.
