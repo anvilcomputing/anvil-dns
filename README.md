@@ -35,8 +35,8 @@ export CLOUDFLARE_API_TOKEN="your_custom_cloudflare_token"
 
 When creating a new record, the app needs to know where to point it. You can provide this in three ways (in order of precedence):
 
-1. **CLI Flag:** `--target-ip 204.152.223.10`  
-2. **Environment Variable:** `export TARGET_IP="204.152.223.10"`  
+1. **CLI Flag:** `--target-ip <ip_of_VPS>`  
+2. **Environment Variable:** `export TARGET_IP="<ip_of_VPS>"`  
 3. **Local Config (Automatic):** Upon a successful creation, the app saves the IP to `~/.anvil-dns.yaml` and will default to it for future runs.
 
 ## **🛠️ Usage**
@@ -62,7 +62,7 @@ Verify if a specific username/subdomain is available or already in use.
 Provision a new `A` record. *(Requires `--target-ip` on the first run).*
 
 ```shell
-./anvil-dns create <username> --target-ip 204.152.223.10
+./anvil-dns create <username> --target-ip <ip_of_VPS>
 ```
 
 #### **3\. List Records**
