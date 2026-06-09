@@ -1,0 +1,19 @@
+# /.gitignore
+
+# Compiled binaries
+anvil-dns
+bin/
+
+# Local Viper configuration / secrets
+.anvil-dns.yaml
+
+# Go workspace / dependencies
+vendor/
+.go/
+*.test
+*.out
+
+# OS specific files
+.DS_Store
+.idea/
+.vscode/
