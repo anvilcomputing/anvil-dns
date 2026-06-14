@@ -1,109 +1,100 @@
-# **Anvil DNS Manager**
+# Anvil DNS Manager
 
-A lightweight, Go-based application for managing Cloudflare DNS records for `anvilcomputing.com`.
+![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
 
-Currently operating as a CLI, this tool is designed to quickly provision unproxied `A` records that point to a VPS running a reverse proxy (like Pangolin). It ensures naming collisions are prevented and provides simple commands to audit and clean up your Cloudflare zone.
+A lightweight, Go-based application for managing Cloudflare DNS records for `anvilcomputing.com`. 
 
-## **✨ Features**
+Built with a modular architecture, this tool provides both a **Command Line Interface (CLI)** and a **Web Admin Dashboard**. It is designed to quickly provision unproxied `A` records that point to a VPS running a reverse proxy (like Pangolin), prevent naming collisions, and provide simple commands to audit and clean up your Cloudflare zone.
 
-* **Fast & Lightweight:** Compiled as a single static Go binary.  
-* **Collision Prevention:** Automatically checks if a subdomain exists before provisioning to prevent accidental overwrites.  
-* **Smart Configuration:** Remembers your last used Target IP using local configuration (`~/.anvil-dns.yaml`).  
-* **Interactive Auditing:** Built-in paginated `list` command to easily audit all existing DNS records in the terminal.  
-* **Safe Deletion:** Includes confirmation prompts before deleting routing records.
+## ✨ Features
 
-## **🚀 Prerequisites**
+*   **Dual Interfaces:** Manage DNS via the terminal or a data-dense, filtering-enabled web dashboard.
+*   **Collision Prevention:** Automatically checks if a subdomain exists before provisioning to prevent accidental overwrites.
+*   **Smart Configuration:** Remembers your last used Target IP.
+*   **Interactive Auditing:** Built-in paginated `list` command (CLI) and instant client-side filtering (Web) to easily audit existing records.
+*   **Safe Deletion:** Includes confirmation prompts before deleting routing records to prevent accidents.
 
-1. **Go 1.21+** installed on your machine.  
-2. A **Cloudflare API Token** with the following permissions:  
-   * `Zone` \-\> `DNS` \-\> `Edit`  
-   * *Zone Resources:* `Include` \-\> `Specific Zone` \-\> `anvilcomputing.com`
+## 🚀 Prerequisites
 
-## **⚙️ Configuration**
+1.  **Go 1.21+** installed on your machine.
+2.  A **Cloudflare API Token** with the following permissions:
+    *   `Zone` -> `DNS` -> `Edit`
+    *   *Zone Resources:* `Include` -> `Specific Zone` -> `anvilcomputing.com`
 
-The application relies on environment variables and a local configuration file.
-
-### **1\. Authentication**
+## ⚙️ Configuration
 
 Export your Cloudflare API token into your shell environment:
-
-```shell
+```bash
 export CLOUDFLARE_API_TOKEN="your_custom_cloudflare_token"
 ```
 
-### **2\. Target IP (For Provisioning)**
-
-When creating a new record, the app needs to know where to point it. You can provide this in three ways (in order of precedence):
-
-1. **CLI Flag:** `--target-ip <ip_of_VPS>`  
-2. **Environment Variable:** `export TARGET_IP="<ip_of_VPS>"`  
-3. **Local Config (Automatic):** Upon a successful creation, the app saves the IP to `~/.anvil-dns.yaml` and will default to it for future runs.
-
-## **🛠️ Usage**
-
-To build the application locally:
-
-```shell
-go build -o anvil-dns cmd/cli/main.go
+*Optional:* Set a default Target IP for provisioning:
+```bash
+export TARGET_IP="<VPS_IP>"
 ```
 
-### **Available Commands**
+---
 
-#### **1\. Check a Record**
+## 💻 Usage: Command Line Interface (CLI)
 
-Verify if a specific username/subdomain is available or already in use.
+To build or run the CLI:
 
-```shell
-./anvil-dns check <username>
+```bash
+# Check availability
+go run cmd/cli/main.go check <username>
+
+# Provision a new record
+go run cmd/cli/main.go create <username> --target-ip <VPS_IP>
+
+# Audit records (Paginated)
+go run cmd/cli/main.go list
+
+# Delete a record
+go run cmd/cli/main.go delete <username>
 ```
 
-#### **2\. Create a Record**
+---
 
-Provision a new `A` record. *(Requires `--target-ip` on the first run).*
+## 🌐 Usage: Web Admin Dashboard
 
-```shell
-./anvil-dns create <username> --target-ip <ip_of_VPS>
+The Web Admin provides a responsive, data-dense UI to perform the same actions as the CLI. It runs a lightweight HTTP server on port `8081`.
+
+```bash
+go run cmd/web/main.go
 ```
+Once running, open your browser and navigate to: **`http://localhost:8081`**
 
-#### **3\. List Records**
+**Web Features:**
+*   Create records using a simple form.
+*   Instantly filter active subdomains by Name or Record Type without page reloads.
+*   Delete records with one click (includes safety confirmations).
+*   No horizontal scrolling; optimized for desktop data density.
 
-Interactively page through all DNS records in the `anvilcomputing.com` zone.
+---
 
-```shell
-./anvil-dns list
-```
+## 📂 Project Structure
 
-#### **4\. Delete a Record**
-
-Safely remove a DNS record. Prompts for confirmation before execution.
-
-```shell
-./anvil-dns delete <username>
-```
-
-## **📂 Project Structure**
-
-```
+```text
 anvil-dns/
 ├── cmd/
-│   └── cli/              # The current CLI interface (Cobra/Viper)
+│   ├── cli/              # The CLI interface (Cobra/Viper)
+│   └── web/              # The Web Admin interface (net/http, html/template)
+│       ├── main.go
+│       └── index.html
 ├── internal/
-│   └── cloudflare/       # Core API logic (separated for reuse in future Web/API interfaces)
+│   └── cloudflare/       # Shared Core API logic
 ├── go.mod
 └── go.sum
 ```
 
-## **🗺️ Future Enhancements**
+## 🗺️ Future Enhancements
 
-This project is built with a modular architecture to support future expansion into a multi-interface service deployed on NixOS.
-
-* **NixOS & Proxmox Packaging:**  
-  * Add a `flake.nix` to package the Go binary.  
-  * Create a declarative NixOS LXC configuration for Proxmox.  
-  * Implement `sops-nix` for secure, encrypted Cloudflare API token management.  
-  * Enable continuous deployment via `deploy-rs`.  
-* **`api` Interface:**  
-  * Add `cmd/api/main.go` to expose the core logic as a REST/Webhook interface for CI/CD automation agents.  
-* **`web` Interface (Admin UI):**  
-  * Add `cmd/web/main.go` to serve a lightweight, mobile-friendly HTML frontend. This will provide a human-usable graphical dashboard to list, create, and delete records from a phone or browser without needing terminal access.  
-* **Cloudflare Proxy Support:** Add a flag/toggle to optionally enable the Cloudflare proxy ("orange cloud") once the Pangolin reverse proxy is configured to handle Cloudflare Origin certificates and real IP resolution.
+- [x] **`web` Interface (Admin UI):** Create a lightweight, data-dense HTML frontend.
+- [ ] **NixOS & Proxmox Packaging:** 
+  - Add a `flake.nix` to package the Go binaries.
+  - Create a declarative NixOS LXC configuration for Proxmox.
+  - Implement `sops-nix` for secure, encrypted Cloudflare API token management.
+  - Enable continuous deployment via `deploy-rs`.
+- [ ] **`api` Interface:** Add `cmd/api/main.go` to expose the core logic as a REST/Webhook interface for CI/CD automation agents.
+- [ ] **Cloudflare Proxy Support:** Add a flag/toggle to optionally enable the Cloudflare proxy ("orange cloud").

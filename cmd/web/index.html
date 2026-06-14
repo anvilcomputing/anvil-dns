@@ -1,0 +1,173 @@
+<!-- cmd/web/index.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Anvil DNS Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        /* 1. Condense the UI by overriding Pico's default variables */
+        :root {
+            --spacing: 0.5rem;                         /* Tighter margins between elements */
+            --form-element-spacing-vertical: 0.25rem;  /* Skinnier input boxes */
+            --form-element-spacing-horizontal: 0.5rem;
+            --font-size: 13px;                         /* Smaller base font size for desktop density */
+            --typography-spacing-vertical: 0.5rem;
+        }
+
+        /* Widen the max container width for desktop screens */
+        main.container { max-width: 1200px; padding-top: 1rem; }
+        
+        .grid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;}
+        h2 { margin-bottom: 0; font-size: 1.5rem; }
+        
+        .alert-success { background-color: #216d41; color: white; padding: 0.5rem; border-radius: 5px; margin-bottom: 0.5rem;}
+        .alert-error { background-color: #b22a2a; color: white; padding: 0.5rem; border-radius: 5px; margin-bottom: 0.5rem;}
+
+        /* 2. Enforce strict table boundaries to eliminate horizontal scrolling */
+        table {
+            width: 100%;
+            table-layout: fixed; /* Forces browser to respect column widths */
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            word-wrap: break-word;      /* Break long strings (like long domains) */
+            overflow-wrap: break-word;
+            white-space: normal;        /* Allow text to wrap to the next line */
+            padding: 0.3rem 0.5rem;     /* Very tight padding for data density */
+            vertical-align: middle;
+        }
+
+        /* Tweak specific column sizes */
+        .col-name { width: 35%; }
+        .col-ip { width: 35%; }
+        .col-type { width: 10%; text-align: center; }
+        .col-proxied { width: 10%; text-align: center; }
+        .col-action { width: 10%; text-align: center; }
+
+        /* Make the delete button tiny */
+        .btn-delete {
+            padding: 0.15rem 0.5rem;
+            font-size: 0.8rem;
+            margin: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        
+        <div class="grid-header">
+            <h2>🔨 Anvil DNS Admin</h2>
+        </div>
+
+        {{ if .Success }}<div class="alert-success">✅ {{ .Success }}</div>{{ end }}
+        {{ if .Error }}<div class="alert-error">❌ {{ .Error }}</div>{{ end }}
+
+        <hr>
+
+        <article>
+            <header><strong>Create New Record</strong></header>
+            <form action="/create" method="POST" style="margin-bottom: 0;">
+                <div class="grid">
+                    <label for="username">
+                        Username (Subdomain)
+                        <input type="text" id="username" name="username" placeholder="e.g. testuser" required>
+                    </label>
+                    <label for="target_ip">
+                        Target IP
+                        <input type="text" id="target_ip" name="target_ip" value="{{ .TargetIP }}" required>
+                    </label>
+                </div>
+                <button type="submit" style="width: auto; padding: 0.25rem 1rem;">Provision Record</button>
+            </form>
+        </article>
+
+        <article>
+            <header><strong>Active Subdomains</strong></header>
+            
+            <div class="grid filter-container">
+                <label for="nameFilter">
+                    Filter by Name
+                    <input type="search" id="nameFilter" placeholder="Type a subdomain name...">
+                </label>
+                <label for="typeFilter">
+                    Filter by Type
+                    <select id="typeFilter">
+                        <option value="">All Types</option>
+                        <option value="A">A</option>
+                        <option value="CNAME">CNAME</option>
+                        <option value="TXT">TXT</option>
+                        <option value="MX">MX</option>
+                        <option value="NS">NS</option>
+                    </select>
+                </label>
+            </div>
+
+            <!-- Notice: The <figure> wrapper has been completely removed to prevent scrolling -->
+            <table id="recordsTable">
+                <thead>
+                    <tr>
+                        <th scope="col" class="col-name">Name</th>
+                        <th scope="col" class="col-type">Type</th>
+                        <th scope="col" class="col-ip">Target IP</th>
+                        <th scope="col" class="col-proxied">Proxied</th>
+                        <th scope="col" class="col-action">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ range .Records }}
+                    <tr class="record-row" data-name="{{ .Name }}" data-type="{{ .Type }}">
+                        <td><strong>{{ .Name }}</strong></td>
+                        <td class="col-type">{{ .Type }}</td>
+                        <td><code>{{ .Content }}</code></td>
+                        <td class="col-proxied">{{ .Proxied }}</td>
+                        <td class="col-action">
+                            <form action="/delete" method="POST" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete {{ .Name }}?');">
+                                <input type="hidden" name="recordName" value="{{ .Name }}">
+                                <button type="submit" class="secondary outline btn-delete">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {{ else }}
+                    <tr>
+                        <td colspan="5">No records found.</td>
+                    </tr>
+                    {{ end }}
+                </tbody>
+            </table>
+        </article>
+
+    </main>
+
+    <script>
+        const nameFilter = document.getElementById('nameFilter');
+        const typeFilter = document.getElementById('typeFilter');
+        const rows = document.querySelectorAll('.record-row');
+
+        function applyFilters() {
+            const nameQuery = nameFilter.value.toLowerCase();
+            const typeQuery = typeFilter.value;
+
+            rows.forEach(row => {
+                const rowName = row.getAttribute('data-name').toLowerCase();
+                const rowType = row.getAttribute('data-type');
+
+                const matchesName = rowName.includes(nameQuery);
+                const matchesType = (typeQuery === "") || (rowType === typeQuery);
+
+                if (matchesName && matchesType) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        nameFilter.addEventListener('input', applyFilters);
+        typeFilter.addEventListener('change', applyFilters);
+    </script>
+</body>
+</html>
